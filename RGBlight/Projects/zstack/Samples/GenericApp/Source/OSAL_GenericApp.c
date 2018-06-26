@@ -23,7 +23,7 @@
   its documentation for any purpose.
 
   YOU FURTHER ACKNOWLEDGE AND AGREE THAT THE SOFTWARE AND DOCUMENTATION ARE
-  PROVIDED “AS IS” WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+  PROVIDED “AS IS?WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED,
   INCLUDING WITHOUT LIMITATION, ANY WARRANTY OF MERCHANTABILITY, TITLE,
   NON-INFRINGEMENT AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT SHALL
   TEXAS INSTRUMENTS OR ITS LICENSORS BE LIABLE OR OBLIGATED UNDER CONTRACT,
@@ -62,8 +62,21 @@
   #include "aps_frag.h"
 #endif
 
-#include "GenericApp.h"
+#if defined (ZDO_COORDINATOR)
+  #include "GenericApp.h"
+#endif
 
+#if defined (BUTTONAPP)
+  #include "ButtonApp.h"
+#endif
+
+#if defined (LIGHTAPP)
+  #include "LightApp.h"
+#endif
+
+#if defined (SENSORAPP)
+  #include "SensorApp.h"
+#endif
 /*********************************************************************
  * GLOBAL VARIABLES
  */
@@ -84,7 +97,22 @@ const pTaskEventHandlerFn tasksArr[] = {
 #if defined ( ZIGBEE_FREQ_AGILITY ) || defined ( ZIGBEE_PANID_CONFLICT )
   ZDNwkMgr_event_loop,
 #endif
+
+#if defined (ZDO_COORDINATOR)
   GenericApp_ProcessEvent
+#endif
+
+#if defined (BUTTONAPP)
+  ButtonApp_ProcessEvent
+#endif
+
+#if defined (LIGHTAPP)
+  LightApp_ProcessEvent
+#endif
+    
+#if defined (SENSORAPP)
+  SensorApp_ProcessEvent
+#endif
 };
 
 const uint8 tasksCnt = sizeof( tasksArr ) / sizeof( tasksArr[0] );
@@ -124,7 +152,22 @@ void osalInitTasks( void )
 #if defined ( ZIGBEE_FREQ_AGILITY ) || defined ( ZIGBEE_PANID_CONFLICT )
   ZDNwkMgr_Init( taskID++ );
 #endif
+
+#if defined (ZDO_COORDINATOR)
   GenericApp_Init( taskID );
+#endif
+
+#if defined (BUTTONAPP)
+  ButtonApp_Init( taskID );
+#endif
+
+#if defined (LIGHTAPP)
+  LightApp_Init( taskID );
+#endif
+  
+#if defined (SENSORAPP)
+  SensorApp_Init( taskID );
+#endif
 }
 
 /*********************************************************************

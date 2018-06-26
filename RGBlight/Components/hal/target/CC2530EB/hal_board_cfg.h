@@ -398,7 +398,11 @@ st( \
 
 /* Set to TRUE enable H/W TIMER usage, FALSE disable it */
 #ifndef HAL_TIMER
+#if (defined LIGHTAPP)
+#define HAL_TIMER TRUE
+#else
 #define HAL_TIMER FALSE
+#endif
 #endif
 
 /* Set to TRUE enable ADC usage, FALSE disable it */
@@ -437,8 +441,13 @@ st( \
 
 /* Set to TRUE enable LED usage, FALSE disable it */
 #ifndef HAL_LED
+#if (!defined LIGHTAPP)
 #define HAL_LED TRUE
+#else
+#define HAL_LED FALSE
 #endif
+#endif
+
 #if (!defined BLINK_LEDS) && (HAL_LED == TRUE)
 #define BLINK_LEDS
 #endif
@@ -450,7 +459,7 @@ st( \
 
 /* Set to TRUE enable UART usage, FALSE disable it */
 #ifndef HAL_UART
-#if (defined ZAPP_P1) || (defined ZAPP_P2) || (defined ZTOOL_P1) || (defined ZTOOL_P2)
+#if ((defined ZAPP_P1) || (defined ZAPP_P2) || (defined ZTOOL_P1) || (defined ZTOOL_P2)) && (!defined LIGHTAPP)
 #define HAL_UART TRUE
 #else
 #define HAL_UART FALSE

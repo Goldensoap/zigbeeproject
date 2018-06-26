@@ -22,7 +22,7 @@
   its documentation for any purpose.
 
   YOU FURTHER ACKNOWLEDGE AND AGREE THAT THE SOFTWARE AND DOCUMENTATION ARE
-  PROVIDED ìAS ISî WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED,
+  PROVIDED ìAS IS?WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED,
   INCLUDING WITHOUT LIMITATION, ANY WARRANTY OF MERCHANTABILITY, TITLE,
   NON-INFRINGEMENT AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT SHALL
   TEXAS INSTRUMENTS OR ITS LICENSORS BE LIABLE OR OBLIGATED UNDER CONTRACT,
@@ -43,3 +43,51 @@
        for the users to implement their own application timer 
        functions.
 *********************************************************************/
+
+/*********************************************************************
+ * INCLUDES
+ */
+#include  "hal_mcu.h"
+#include  "hal_defs.h"
+#include  "hal_types.h"
+#include  "hal_timer.h"
+
+void HalTimerInit(void)
+{
+  /*±∏”√“˝Ω≈≈‰÷√*/
+  
+  PERCFG &= ~0x40;//∂® ±∆˜±∏”√Œª÷√1 
+ // P2DIR |= 0xC0;  //∂® ±∆˜Õ®µ¿2-3æﬂ”–µ⁄“ª”≈œ»º∂
+  P0SEL |= 0x7C;  // Set P0_2-P0_5 to peripheral
+  P0DIR |= 0x7C;
+  //P1SEL |= 0x07;
+  //P1DIR |= 0x07;
+  P2DIR |= 0xC0; 
+  //P2SEL &= ~0x10; //∂® ±∆˜1”≈œ»”⁄∂® ±∆˜4
+  
+    
+  T1CCTL0 |=  0x1C;//Õ®µ¿≥ı ºªØ
+  T1CCTL1 |=  0x1C;
+  T1CCTL2 |=  0x1C;
+  T1CCTL3 |=  0x1C;
+  T1CCTL4 |=  0x1C;
+  
+  T1CC0H = 0x00;//PWM÷‹∆⁄∫Õ’ºø’±»
+  T1CC0L = 0xFF;//255∑Ω±„∫ÕRGBA∂‘”¶
+  T1CC1H = 0x00;
+  T1CC1L = 0x00;
+  T1CC2H = 0x00;
+  T1CC2L = 0x00;
+  T1CC3H = 0x00;
+  T1CC3L = 0x00;
+  T1CC4H = 0x00;
+  T1CC4L = 0x00;
+  
+  T1CTL &= ~(0x03);//‘›Õ£‘À––∂® ±∆˜1
+  T1CTL &= ~(0x0c);//ª÷∏¥≤ª∑÷∆µ◊¥Ã¨
+  T1CTL |= 0x0c;//…Ë÷√∑÷∆µ0c
+  T1CTL |= 0x02;//…Ë÷√ƒ£ƒ£ Ω02
+
+
+}
+

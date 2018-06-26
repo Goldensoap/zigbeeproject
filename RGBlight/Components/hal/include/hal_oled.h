@@ -29,13 +29,13 @@ extern "C"
 #define OLED_SDIN_Set() OLED_SDIN=1
 
 /*----------------------*/
-#define HAL_OLED_LINE_1 0x01
-#define HAL_OLED_LINE_2 0x02
-#define HAL_OLED_LINE_3 0x03
-#define HAL_OLED_LINE_4 0x04
-#define HAL_OLED_LINE_5 0x05
-#define HAL_OLED_LINE_6 0x06
-#define HAL_OLED_LINE_7 0x07
+#define HAL_OLED_LINE_1 0x00
+#define HAL_OLED_LINE_2 0x01
+#define HAL_OLED_LINE_3 0x02
+#define HAL_OLED_LINE_4 0x03
+#define HAL_OLED_LINE_5 0x04
+#define HAL_OLED_LINE_6 0x05
+#define HAL_OLED_LINE_7 0x06
 #define HAL_OLED_XSTART 0x00
 #define HAL_OLED_XMIDDLE 0x40 //只有X轴可以用此定义
 

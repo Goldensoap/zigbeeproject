@@ -1,5 +1,5 @@
 /**************************************************************************************************
-  Filename:       GenericApp.c
+  Filename:       LightApp.c
   Revised:        $Date: 2009-03-18 15:56:27 -0700 (Wed, 18 Mar 2009) $
   Revision:       $Revision: 19453 $
 
@@ -67,7 +67,7 @@
 #include "ZDProfile.h"
 #include "OnBoard.h"
 
-#include "GenericApp.h"
+#include "LightApp.h"
 #include "DebugTrace.h"
 
 #if !defined( WIN32 )
@@ -79,6 +79,7 @@
 #include "hal_key.h"
 #include "hal_uart.h"
 #include "hal_oled.h"
+#include "hal_timer.h"
 /*********************************************************************
  * MACROS
  */
@@ -96,29 +97,32 @@
  */
 
 // This list should be filled with Application specific Cluster IDs.
-const cId_t GenericApp_ClusterList[GENERICAPP_MAX_CLUSTERS] =
+const cId_t LightApp_ClusterList[LIGHTAPP_MAX_CLUSTERS] =
 {
-  GENERICAPP_CLUSTERID
+  GENERICAPP_CLUSTERID,
+  BUTTONAPP_CLUSTERID,
+  LIGHTAPP_CLUSTERID,
+  SENSORAPP_CLUSTERID
 };
 
-const SimpleDescriptionFormat_t GenericApp_SimpleDesc =
+const SimpleDescriptionFormat_t LightApp_SimpleDesc =
 {
-  GENERICAPP_ENDPOINT,              //  int Endpoint;
-  GENERICAPP_PROFID,                //  uint16 AppProfId[2];
-  GENERICAPP_DEVICEID,              //  uint16 AppDeviceId[2];
-  GENERICAPP_DEVICE_VERSION,        //  int   AppDevVer:4;
-  GENERICAPP_FLAGS,                 //  int   AppFlags:4;
-  GENERICAPP_MAX_CLUSTERS,          //  byte  AppNumInClusters;
-  (cId_t *)GenericApp_ClusterList,  //  byte *pAppInClusterList;
-  GENERICAPP_MAX_CLUSTERS,          //  byte  AppNumInClusters;
-  (cId_t *)GenericApp_ClusterList   //  byte *pAppInClusterList;
+  LIGHTAPP_ENDPOINT,              //  int Endpoint;
+  LIGHTAPP_PROFID,                //  uint16 AppProfId[2];
+  LIGHTAPP_DEVICEID,              //  uint16 AppDeviceId[2];
+  LIGHTAPP_DEVICE_VERSION,        //  int   AppDevVer:4;
+  LIGHTAPP_FLAGS,                 //  int   AppFlags:4;
+  LIGHTAPP_MAX_CLUSTERS,          //  byte  AppNumInClusters;
+  (cId_t *)LightApp_ClusterList,//  byte *pAppInClusterList;
+  LIGHTAPP_MAX_CLUSTERS,          //  byte  AppNumInClusters;
+  (cId_t *)LightApp_ClusterList   //  byte *pAppInClusterList;
 };
 
 // This is the Endpoint/Interface description.  It is defined here, but
-// filled-in in GenericApp_Init().  Another way to go would be to fill
+// filled-in in LightApp_Init().  Another way to go would be to fill
 // in the structure here and make it a "const" (in code space).  The
 // way it's defined in this sample app it is define in RAM.
-endPointDesc_t GenericApp_epDesc;
+endPointDesc_t LightApp_epDesc;
 
 /*********************************************************************
  * EXTERNAL VARIABLES
@@ -131,24 +135,33 @@ endPointDesc_t GenericApp_epDesc;
 /*********************************************************************
  * LOCAL VARIABLES
  */
-byte GenericApp_TaskID;   // Task ID for internal task/event processing
+byte LightApp_TaskID;   // Task ID for internal task/event processing
                           // This variable will be received when
-                          // GenericApp_Init() is called.
-devStates_t GenericApp_NwkState;
+                          // LightApp_Init() is called.
+devStates_t LightApp_NwkState;
 
 
-byte GenericApp_TransID;  // This is the unique message ID (counter)
+byte LightApp_TransID;  // This is the unique message ID (counter)
 
-afAddrType_t GenericApp_DstAddr;
+afAddrType_t LightApp_DstAddr;
+
+static byte RxBuf[80+1];
+static uint8 SerialApp_TxLen;
+static uint8 R=0,G=0,Blue=0,W=0;
+static uint8 Rbk=0,Gbk=0,Bluebk=0,Wbk=0;
+static unsigned char lightlevel[10]={0x00,0x1E,0x37,0x50,0x69,0x82,0x9B,0xB4,0xCD,0xE6};
 
 /*********************************************************************
  * LOCAL FUNCTIONS
  */
-void GenericApp_ProcessZDOMsgs( zdoIncomingMsg_t *inMsg );
-void GenericApp_HandleKeys( byte shift, byte keys );
-void GenericApp_MessageMSGCB( afIncomingMSGPacket_t *pckt );
-void GenericApp_SendTheMessage( void );
+void LightApp_ProcessZDOMsgs( zdoIncomingMsg_t *inMsg );
+void LightApp_HandleKeys( byte shift, byte keys );
+void LightApp_MessageMSGCB( afIncomingMSGPacket_t *pckt );
+void LightApp_SendTheMessage( void );
 
+void Parse_RGBW(uint8* RGBW, uint8 len);
+void RGB_change(void);
+void RGB_PWMset(void);
 /*********************************************************************
  * NETWORK LAYER CALLBACKS
  */
@@ -158,7 +171,7 @@ void GenericApp_SendTheMessage( void );
  */
 
 /*********************************************************************
- * @fn      GenericApp_Init
+ * @fn      LightApp_Init
  *
  * @brief   Initialization function for the Generic App Task.
  *          This is called during initialization and should contain
@@ -171,57 +184,44 @@ void GenericApp_SendTheMessage( void );
  *
  * @return  none
  */
-void GenericApp_Init( byte task_id )
+void LightApp_Init( byte task_id )
 {
-  GenericApp_TaskID = task_id;
-  GenericApp_NwkState = DEV_INIT;
-  GenericApp_TransID = 0;
+  LightApp_TaskID = task_id;
+  LightApp_NwkState = DEV_INIT;
+  LightApp_TransID = 0;
 
   // Device hardware initialization can be added here or in main() (Zmain.c).
   // If the hardware is application specific - add it here.
   // If the hardware is other parts of the device add it in main().
 
-  GenericApp_DstAddr.addrMode = (afAddrMode_t)Addr16Bit;
-  GenericApp_DstAddr.endPoint = GENERICAPP_ENDPOINT;
-  GenericApp_DstAddr.addr.shortAddr = 0xFFFF;
+  LightApp_DstAddr.addrMode = (afAddrMode_t)AddrNotPresent;
+  LightApp_DstAddr.endPoint = LIGHTAPP_ENDPOINT;
+  LightApp_DstAddr.addr.shortAddr = 0xFFFE;
 
   // Fill out the endpoint description.
-  GenericApp_epDesc.endPoint = GENERICAPP_ENDPOINT;
-  GenericApp_epDesc.task_id = &GenericApp_TaskID;
-  GenericApp_epDesc.simpleDesc
-            = (SimpleDescriptionFormat_t *)&GenericApp_SimpleDesc;
-  GenericApp_epDesc.latencyReq = noLatencyReqs;
+  LightApp_epDesc.endPoint = LIGHTAPP_ENDPOINT;
+  LightApp_epDesc.task_id = &LightApp_TaskID;
+  LightApp_epDesc.simpleDesc
+            = (SimpleDescriptionFormat_t *)&LightApp_SimpleDesc;
+  LightApp_epDesc.latencyReq = noLatencyReqs;
 
   // Register the endpoint description with the AF
-  afRegister( &GenericApp_epDesc );
+  afRegister( &LightApp_epDesc );
 
   // Register for all key events - This app will handle all key events
-  RegisterForKeys( GenericApp_TaskID );
+  RegisterForKeys( LightApp_TaskID );
   
-  halUARTCfg_t uartConfig;
-  uartConfig.configured           = TRUE;              // 2x30 don't care - see uart driver.
-  uartConfig.baudRate             = HAL_UART_BR_19200;
-  uartConfig.flowControl          = FALSE;
-  uartConfig.flowControlThreshold = 64;   // 2x30 don't care - see uart driver.
-  uartConfig.rx.maxBufSize        = 128;  // 2x30 don't care - see uart driver.
-  uartConfig.tx.maxBufSize        = 128;  // 2x30 don't care - see uart driver.
-  uartConfig.idleTimeout          = 6;    // 2x30 don't care - see uart driver.
-  uartConfig.intEnable            = TRUE; // 2x30 don't care - see uart driver.
-  //uartConfig.callBackFunc =rxCB;
-  HalUARTOpen(0,&uartConfig);
-  MicroWait(100);
-  HalUARTWrite(0,"system start\r\n",14);
   
   // Update the display
 
-  Hal_Oled_WriteString(HAL_OLED_XSTART,HAL_OLED_LINE_1,"GenericApp",SIZE1 );
+  Hal_Oled_WriteString(HAL_OLED_XSTART,HAL_OLED_LINE_3,"LightApp",SIZE1 );
     
-  ZDO_RegisterForZDOMsg( GenericApp_TaskID, End_Device_Bind_rsp );
-  ZDO_RegisterForZDOMsg( GenericApp_TaskID, Match_Desc_rsp );
+  ZDO_RegisterForZDOMsg( LightApp_TaskID, End_Device_Bind_rsp );
+  ZDO_RegisterForZDOMsg( LightApp_TaskID, Match_Desc_rsp );
 }
 
 /*********************************************************************
- * @fn      GenericApp_ProcessEvent
+ * @fn      LightApp_ProcessEvent
  *
  * @brief   Generic Application Task event processor.  This function
  *          is called to process all events for the task.  Events
@@ -233,7 +233,7 @@ void GenericApp_Init( byte task_id )
  *
  * @return  none
  */
-UINT16 GenericApp_ProcessEvent( byte task_id, UINT16 events )
+UINT16 LightApp_ProcessEvent( byte task_id, UINT16 events )
 {
   afIncomingMSGPacket_t *MSGpkt;
   afDataConfirm_t *afDataConfirm;
@@ -246,17 +246,17 @@ UINT16 GenericApp_ProcessEvent( byte task_id, UINT16 events )
 
   if ( events & SYS_EVENT_MSG )
   {
-    MSGpkt = (afIncomingMSGPacket_t *)osal_msg_receive( GenericApp_TaskID );
+    MSGpkt = (afIncomingMSGPacket_t *)osal_msg_receive( LightApp_TaskID );
     while ( MSGpkt )
     {
       switch ( MSGpkt->hdr.event )
       {
         case ZDO_CB_MSG:
-          GenericApp_ProcessZDOMsgs( (zdoIncomingMsg_t *)MSGpkt );
+          LightApp_ProcessZDOMsgs( (zdoIncomingMsg_t *)MSGpkt );
           break;
           
         case KEY_CHANGE:
-          GenericApp_HandleKeys( ((keyChange_t *)MSGpkt)->state, ((keyChange_t *)MSGpkt)->keys );
+          LightApp_HandleKeys( ((keyChange_t *)MSGpkt)->state, ((keyChange_t *)MSGpkt)->keys );
           break;
 
         case AF_DATA_CONFIRM_CMD:
@@ -278,20 +278,18 @@ UINT16 GenericApp_ProcessEvent( byte task_id, UINT16 events )
           break;
 
         case AF_INCOMING_MSG_CMD:
-          GenericApp_MessageMSGCB( MSGpkt );
+          LightApp_MessageMSGCB( MSGpkt );
           break;
 
         case ZDO_STATE_CHANGE:
-          GenericApp_NwkState = (devStates_t)(MSGpkt->hdr.status);
-          if ( (GenericApp_NwkState == DEV_ZB_COORD)
-              || (GenericApp_NwkState == DEV_ROUTER)
-              || (GenericApp_NwkState == DEV_END_DEVICE) )
+          LightApp_NwkState = (devStates_t)(MSGpkt->hdr.status);
+          if ( (LightApp_NwkState == DEV_ZB_COORD)
+              || (LightApp_NwkState == DEV_ROUTER)
+              || (LightApp_NwkState == DEV_END_DEVICE) )
           {
-            HalUARTWrite(0,"success join net\r\n",19);
+            //HalUARTWrite(0,"success join net\r\n",19);
+            Hal_Oled_WriteString(HAL_OLED_XSTART,HAL_OLED_LINE_4,"success join net",SIZE1 );
             // Start sending "the" message in a regular interval.
-            osal_start_timerEx( GenericApp_TaskID,
-                                GENERICAPP_SEND_MSG_EVT,
-                              GENERICAPP_SEND_MSG_TIMEOUT );
           }
           break;
 
@@ -303,27 +301,11 @@ UINT16 GenericApp_ProcessEvent( byte task_id, UINT16 events )
       osal_msg_deallocate( (uint8 *)MSGpkt );
 
       // Next
-      MSGpkt = (afIncomingMSGPacket_t *)osal_msg_receive( GenericApp_TaskID );
+      MSGpkt = (afIncomingMSGPacket_t *)osal_msg_receive( LightApp_TaskID );
     }
 
     // return unprocessed events
     return (events ^ SYS_EVENT_MSG);
-  }
-
-  // Send a message out - This event is generated by a timer
-  //  (setup in GenericApp_Init()).
-  if ( events & GENERICAPP_SEND_MSG_EVT )
-  {
-    // Send "the" message
-    GenericApp_SendTheMessage();
-
-    // Setup to send message again
-    osal_start_timerEx( GenericApp_TaskID,
-                        GENERICAPP_SEND_MSG_EVT,
-                      GENERICAPP_SEND_MSG_TIMEOUT );
-
-    // return unprocessed events
-    return (events ^ GENERICAPP_SEND_MSG_EVT);
   }
 
   // Discard unknown events
@@ -335,7 +317,7 @@ UINT16 GenericApp_ProcessEvent( byte task_id, UINT16 events )
  */
 
 /*********************************************************************
- * @fn      GenericApp_ProcessZDOMsgs()
+ * @fn      LightApp_ProcessZDOMsgs()
  *
  * @brief   Process response messages
  *
@@ -343,7 +325,7 @@ UINT16 GenericApp_ProcessEvent( byte task_id, UINT16 events )
  *
  * @return  none
  */
-void GenericApp_ProcessZDOMsgs( zdoIncomingMsg_t *inMsg )
+void LightApp_ProcessZDOMsgs( zdoIncomingMsg_t *inMsg )
 {
   switch ( inMsg->clusterID )
   {
@@ -351,13 +333,15 @@ void GenericApp_ProcessZDOMsgs( zdoIncomingMsg_t *inMsg )
       if ( ZDO_ParseBindRsp( inMsg ) == ZSuccess )
       {
         // Light LED
-        HalLedSet( HAL_LED_1, HAL_LED_MODE_ON );
+        //HalLedSet( HAL_LED_1, HAL_LED_MODE_ON );
+        Hal_Oled_WriteString(HAL_OLED_XSTART,HAL_OLED_LINE_4,"bind success",SIZE1 );
       }
 #if defined(BLINK_LEDS)
       else
       {
         // Flash LED to show failure
-        HalLedSet ( HAL_LED_1, HAL_LED_MODE_FLASH );
+        //HalLedSet ( HAL_LED_1, HAL_LED_MODE_FLASH );
+        Hal_Oled_WriteString(HAL_OLED_XSTART,HAL_OLED_LINE_4,"bind failure",SIZE1 );
       }
 #endif
       break;
@@ -369,13 +353,14 @@ void GenericApp_ProcessZDOMsgs( zdoIncomingMsg_t *inMsg )
         {
           if ( pRsp->status == ZSuccess && pRsp->cnt )
           {
-            GenericApp_DstAddr.addrMode = (afAddrMode_t)Addr16Bit;
-            GenericApp_DstAddr.addr.shortAddr = pRsp->nwkAddr;
+            LightApp_DstAddr.addrMode = (afAddrMode_t)Addr16Bit;
+            LightApp_DstAddr.addr.shortAddr = pRsp->nwkAddr;
             // Take the first endpoint, Can be changed to search through endpoints
-            GenericApp_DstAddr.endPoint = pRsp->epList[0];
+            LightApp_DstAddr.endPoint = pRsp->epList[0];
 
             // Light LED
-            HalLedSet( HAL_LED_1, HAL_LED_MODE_ON );
+            //HalLedSet( HAL_LED_1, HAL_LED_MODE_ON );
+            Hal_Oled_WriteString(HAL_OLED_XSTART,HAL_OLED_LINE_4,"bind success",SIZE1 );
           }
           osal_mem_free( pRsp );
         }
@@ -385,7 +370,7 @@ void GenericApp_ProcessZDOMsgs( zdoIncomingMsg_t *inMsg )
 }
 
 /*********************************************************************
- * @fn      GenericApp_HandleKeys
+ * @fn      LightApp_HandleKeys
  *
  * @brief   Handles all key events for this device.
  *
@@ -398,66 +383,38 @@ void GenericApp_ProcessZDOMsgs( zdoIncomingMsg_t *inMsg )
  *
  * @return  none
  */
-void GenericApp_HandleKeys( byte shift, byte keys )
+void LightApp_HandleKeys( byte shift, byte keys )
 {
   zAddrType_t dstAddr;
-  
-  // Shift is used to make each button/switch dual purpose.
-  if ( shift )
-  {
+
     if ( keys & HAL_KEY_SW_1 )
     {
-    }
-    if ( keys & HAL_KEY_SW_2 )
-    {
-    }
-    if ( keys & HAL_KEY_SW_3 )
-    {
-    }
-    if ( keys & HAL_KEY_SW_4 )
-    {
-    }
-  }
-  else
-  {
-    if ( keys & HAL_KEY_SW_2 )
-    {
-      HalLedSet ( HAL_LED_1, HAL_LED_MODE_ON );
-    }
-    
-    if ( keys & HAL_KEY_SW_1 )
-    {
-      HalLedSet ( HAL_LED_1, HAL_LED_MODE_OFF );
-    }
-
-    if ( keys & HAL_KEY_SW_6 )
-    {
-      HalLedSet ( HAL_LED_1, HAL_LED_MODE_OFF );
-
+      //HalLedSet ( HAL_LED_1, HAL_LED_MODE_OFF );
+      Hal_Oled_WriteString(HAL_OLED_XSTART,HAL_OLED_LINE_4,"bind waitting",SIZE1 );
       // Initiate an End Device Bind Request for the mandatory endpoint
       dstAddr.addrMode = Addr16Bit;
       dstAddr.addr.shortAddr = 0x0000; // Coordinator
       ZDP_EndDeviceBindReq( &dstAddr, NLME_GetShortAddr(), 
-                            GenericApp_epDesc.endPoint,
-                            GENERICAPP_PROFID,
-                            GENERICAPP_MAX_CLUSTERS, (cId_t *)GenericApp_ClusterList,
-                            GENERICAPP_MAX_CLUSTERS, (cId_t *)GenericApp_ClusterList,
+                            LightApp_epDesc.endPoint,
+                            LIGHTAPP_PROFID,
+                            LIGHTAPP_MAX_CLUSTERS, (cId_t *)LightApp_ClusterList,
+                            LIGHTAPP_MAX_CLUSTERS, (cId_t *)LightApp_ClusterList,
                             FALSE );
     }
     
-    if ( keys & HAL_KEY_SW_4 )
+    if ( keys & HAL_KEY_SW_2 )
     {
-      HalLedSet ( HAL_LED_1, HAL_LED_MODE_OFF );
+      //HalLedSet ( HAL_LED_1, HAL_LED_MODE_OFF );
+      Hal_Oled_WriteString(HAL_OLED_XSTART,HAL_OLED_LINE_4,"bind waitting",SIZE1 );
       // Initiate a Match Description Request (Service Discovery)
       dstAddr.addrMode = AddrBroadcast;
       dstAddr.addr.shortAddr = NWK_BROADCAST_SHORTADDR;
       ZDP_MatchDescReq( &dstAddr, NWK_BROADCAST_SHORTADDR,
-                        GENERICAPP_PROFID,
-                        GENERICAPP_MAX_CLUSTERS, (cId_t *)GenericApp_ClusterList,
-                        GENERICAPP_MAX_CLUSTERS, (cId_t *)GenericApp_ClusterList,
+                        LIGHTAPP_PROFID,
+                        LIGHTAPP_MAX_CLUSTERS, (cId_t *)LightApp_ClusterList,
+                        LIGHTAPP_MAX_CLUSTERS, (cId_t *)LightApp_ClusterList,
                         FALSE );
     }
-  }
 }
 
 /*********************************************************************
@@ -465,7 +422,7 @@ void GenericApp_HandleKeys( byte shift, byte keys )
  */
 
 /*********************************************************************
- * @fn      GenericApp_MessageMSGCB
+ * @fn      LightApp_MessageMSGCB
  *
  * @brief   Data message processor callback.  This function processes
  *          any incoming data - probably from other devices.  So, based
@@ -475,24 +432,80 @@ void GenericApp_HandleKeys( byte shift, byte keys )
  *
  * @return  none
  */
-void GenericApp_MessageMSGCB( afIncomingMSGPacket_t *pkt )
+void LightApp_MessageMSGCB( afIncomingMSGPacket_t *pkt )
 {
-  HalUARTWrite(0,pkt->cmd.Data,pkt->cmd.DataLength);
-  Hal_Oled_WriteString(HAL_OLED_XSTART,HAL_OLED_LINE_6,pkt->cmd.Data,SIZE1);
+  unsigned char deviceID = '1';
+
+  //Hal_Oled_WriteString(HAL_OLED_XSTART,HAL_OLED_LINE_6,pkt->cmd.Data,SIZE1);
+  osal_memset(RxBuf, 0, 80+1);
+  SerialApp_TxLen=pkt->cmd.DataLength;
+  osal_memcpy(RxBuf, pkt->cmd.Data, SerialApp_TxLen);
+  
   switch ( pkt->clusterId )
   {
-    case GENERICAPP_CLUSTERID:
-     
+    case GENERICAPP_CLUSTERID: 
       // "the" message
-#if defined( WIN32 )
-      WPRINTSTR( pkt->cmd.Data );
-#endif
+        if(deviceID == RxBuf[0])
+        {
+          Parse_RGBW(RxBuf, SerialApp_TxLen);
+      
+          Wbk=W;
+          Rbk=R;
+          Gbk=G;
+          Bluebk=Blue;
+      
+          RGB_change();
+          RGB_PWMset();
+        } 
       break;
-  }
+    
+    case SENSORAPP_CLUSTERID:
+    
+      W = lightlevel[RxBuf[0]];
+      
+      R=Rbk;
+      G=Gbk;
+      Blue=Bluebk;
+      
+      RGB_change();
+      RGB_PWMset();
+      
+      Wbk=W;
+      
+      break;
+      
+    case BUTTONAPP_CLUSTERID:
+      if(RxBuf[0]=='1')
+      {
+        W=Wbk;
+        R=Rbk;
+        G=Gbk;
+        Blue=Bluebk;
+        if(W==0 && R==0 && G==0 && Blue==0)
+        {
+          R=255;
+          G=255;
+          Blue=255;
+          W=180;
+        }
+        RGB_change();
+        RGB_PWMset();
+      }
+      else if(RxBuf[0]=='0')
+      {
+        W=255;
+        G=255;
+        Blue=255;
+        R=255;
+        RGB_PWMset();
+      }
+        break;
+     default:break;
+   }
 }
 
 /*********************************************************************
- * @fn      GenericApp_SendTheMessage
+ * @fn      LightApp_SendTheMessage
  *
  * @brief   Send "the" message.
  *
@@ -500,25 +513,25 @@ void GenericApp_MessageMSGCB( afIncomingMSGPacket_t *pkt )
  *
  * @return  none
  */
-void GenericApp_SendTheMessage( void )
+void LightApp_SendTheMessage( void )
 {
   char theMessageData[] = "Hello World";
 
-  if ( AF_DataRequest( &GenericApp_DstAddr, &GenericApp_epDesc,
-                       GENERICAPP_CLUSTERID,
+  if ( AF_DataRequest( &LightApp_DstAddr, &LightApp_epDesc,
+                       LIGHTAPP_CLUSTERID,
                        (byte)osal_strlen( theMessageData ) + 1,
                        (byte *)&theMessageData,
-                       &GenericApp_TransID,
+                       &LightApp_TransID,
                        AF_DISCV_ROUTE, AF_DEFAULT_RADIUS ) == afStatus_SUCCESS )
   {
     // Successfully requested to be sent.
-    HalUARTWrite(0,"success send messages",21);
+
     //OLED_Clear();
     Hal_Oled_WriteString(HAL_OLED_XSTART,HAL_OLED_LINE_5,"send success",SIZE1 );
   }
   else
   {
-    HalUARTWrite(0,"send failed",11);
+
     //OLED_Clear();
     Hal_Oled_WriteString(HAL_OLED_XSTART,HAL_OLED_LINE_5,"send failed",SIZE1 );
     // Error occurred in request to send.
@@ -527,3 +540,171 @@ void GenericApp_SendTheMessage( void )
 
 /*********************************************************************
 *********************************************************************/
+
+/*********************************************************************
+ * @fn      Parse_RGBW
+ *
+ * @brief   parse data from homeassistant.
+ *
+ * @param   Rxbuf lenght
+ *
+ * @return  none
+ */
+
+void Parse_RGBW(uint8* RGBW, uint8 len)
+{
+  uint8 i=0,m=19,j=0,flag=0;
+  uint8 Data[20]={0};
+  R=0;G=0;Blue=0;W=0;
+  
+  for(i=0; i < len; i++)
+  {
+    if(47<RGBW[i] && RGBW[i]<58)
+    {
+      Data[j]=RGBW[i] - '0';
+      j++;
+      if (47>RGBW[i+1] || RGBW[i+1]>58)
+      {
+        Data[j]=10;
+        j++;
+      }
+    }
+  }
+  
+  for(m=19; m>0; m--)
+  {
+    j = 1;
+    if(Data[m]==10)
+    {
+      flag++;
+    }
+    
+    if(flag == 1)
+      {
+        while(Data[m-j] != 10)
+        {
+          if(j==1)Blue += Data[m-j];
+          if(j==2)Blue += (Data[m-j]*10);
+          if(j==3)Blue += (Data[m-j]*100);
+          j++;
+        }
+        flag++;
+        j = 1;
+      }
+     if(flag == 3)
+      {
+        while(Data[m-j] != 10)
+        {
+          if(j==1)G += Data[m-j];
+          if(j==2)G += (Data[m-j]*10);
+          if(j==3)G += (Data[m-j]*100);
+          j++;
+        }
+        flag++;
+        j = 1;
+      }
+     if(flag == 5)
+      {
+        while(Data[m-j] != 10)
+        {
+          
+          if(j==1)R += Data[m-j];
+          if(j==2)R += (Data[m-j]*10);
+          if(j==3)R += (Data[m-j]*100);
+          j++;
+        }
+        flag++;
+        j = 1;
+      }
+     if(flag == 7)
+      {
+        while(Data[m-j] != 10)
+        {
+          if(j==1)W += Data[m-j];
+          if(j==2)W += (Data[m-j]*10);
+          if(j==3)W += (Data[m-j]*100);
+          j++;
+        }
+        flag++;
+      //  j = 1;
+        break;
+      }
+     }
+}
+
+void RGB_change(void)
+{
+      
+    R = (uint8)(W/(255.0)*R);
+    G = (uint8)(W/(255.0)*G);
+    Blue = (uint8)(W/(255.0)*Blue);
+  
+    if(R>245)R=245;
+    if(G>245)G=245;
+    if(Blue>245)Blue=245;
+    if(W>245)W=245;
+    
+    if(R == 0)R=255;
+    if(G == 0)G=255;
+    if(Blue == 0)Blue=255;
+    if(W == 0)W=255;
+  
+    if(R<8)R=8;
+    if(G<8)G=8;
+    if(Blue<8)Blue=8;
+    if(W<8)W=8;
+
+}
+
+void RGB_PWMset(void)
+{
+    static char show[]="R:000 G:000 B:000 W:000";
+    
+    show[2]='0';
+    show[3]='0';
+    show[4]='0';
+    
+    show[8]= '0';
+    show[9]= '0';
+    show[10]= '0';
+    
+    show[14]= '0';
+    show[15]= '0';
+    show[16]= '0';
+    
+    show[20]= '0';
+    show[21]= '0';
+    show[22]= '0';
+    
+    
+    T1CC1H = 0x00;
+    T1CC1L = 255-W;
+    
+    T1CC2H = 0x00;
+    T1CC2L = 255-G;
+    
+    T1CC3H = 0x00;
+    T1CC3L = 255-Blue;
+    
+    T1CC4H = 0x00;
+    T1CC4L = 255-R;
+    
+
+    show[2]=  R/100+'0';
+    show[3]= (R/10)%10+'0';
+    show[4]= R%10+'0';
+    
+    show[8]= G/100+'0';
+    show[9]= (G/10)%10+'0';
+    show[10]= G%10+'0';
+    
+    show[14]= Blue/100+'0';
+    show[15]= (Blue/10)%10+'0';
+    show[16]= Blue%10+'0';
+    
+    show[20]= W/100+'0';
+    show[21]= (W/10)%10+'0';
+    show[22]= W%10+'0';
+    
+    Hal_Oled_WriteString(HAL_OLED_XSTART,HAL_OLED_LINE_6,show,SIZE1 );
+}

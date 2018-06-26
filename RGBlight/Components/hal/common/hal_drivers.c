@@ -128,8 +128,9 @@ void Hal_Init( uint8 task_id )
 void HalDriverInit (void)
 {
   /* TIMER */
-#if (defined HAL_TIMER) && (HAL_TIMER == TRUE)
-  #error "The hal timer driver module is removed."
+#if (defined HAL_TIMER) && (HAL_TIMER == TRUE) && (defined LIGHTAPP)
+  HalTimerInit();
+  //#error "The hal timer driver module is removed."
 #endif
 
   /* ADC */
@@ -278,7 +279,8 @@ void Hal_ProcessPoll ()
 
   /* Timer Poll */
 #if (defined HAL_TIMER) && (HAL_TIMER == TRUE)
-  #error "The hal timer driver module is removed."
+   //HalTimerInit();
+  //#error "The hal timer driver module is removed."
 #endif
 
   /* UART Poll */

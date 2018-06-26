@@ -1,5 +1,5 @@
 /**************************************************************************************************
-  Filename:       GenericApp.h
+  Filename:       LightApp.h
   Revised:        $Date: 2007-10-27 17:22:23 -0700 (Sat, 27 Oct 2007) $
   Revision:       $Revision: 15795 $
 
@@ -22,7 +22,7 @@
   its documentation for any purpose.
 
   YOU FURTHER ACKNOWLEDGE AND AGREE THAT THE SOFTWARE AND DOCUMENTATION ARE
-  PROVIDED “AS IS” WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+  PROVIDED ï¿½AS ISï¿?WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
   INCLUDING WITHOUT LIMITATION, ANY WARRANTY OF MERCHANTABILITY, TITLE, 
   NON-INFRINGEMENT AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT SHALL
   TEXAS INSTRUMENTS OR ITS LICENSORS BE LIABLE OR OBLIGATED UNDER CONTRACT,
@@ -37,8 +37,8 @@
   contact Texas Instruments Incorporated at www.TI.com. 
 **************************************************************************************************/
 
-#ifndef GENERICAPP_H
-#define GENERICAPP_H
+#ifndef LIGHTAPP_H
+#define LIGHTAPP_H
 
 #ifdef __cplusplus
 extern "C"
@@ -56,21 +56,24 @@ extern "C"
 
 // These constants are only for example and should be changed to the
 // device's needs
-#define GENERICAPP_ENDPOINT           10
+#define LIGHTAPP_ENDPOINT           10
 
-#define GENERICAPP_PROFID             0x0F04
-#define GENERICAPP_DEVICEID           0x0001
-#define GENERICAPP_DEVICE_VERSION     0
-#define GENERICAPP_FLAGS              0
+#define LIGHTAPP_PROFID             0x0F04
+#define LIGHTAPP_DEVICEID           0x0001
+#define LIGHTAPP_DEVICE_VERSION     0
+#define LIGHTAPP_FLAGS              0
 
-#define GENERICAPP_MAX_CLUSTERS       1
-#define GENERICAPP_CLUSTERID          1
+#define LIGHTAPP_MAX_CLUSTERS    4
+#define GENERICAPP_CLUSTERID        1
+#define BUTTONAPP_CLUSTERID         2
+#define SENSORAPP_CLUSTERID         3
+#define LIGHTAPP_CLUSTERID          4
 
 // Send Message Timeout
-#define GENERICAPP_SEND_MSG_TIMEOUT   5000     // Every 5 seconds
+#define LIGHTAPP_SEND_MSG_TIMEOUT   5000     // Every 5 seconds
 
 // Application Events (OSAL) - These are bit weighted definitions.
-#define GENERICAPP_SEND_MSG_EVT       0x0001
+#define LIGHTAPP_SEND_MSG_EVT       0x0001
 
 /*********************************************************************
  * MACROS
@@ -83,12 +86,12 @@ extern "C"
 /*
  * Task Initialization for the Generic Application
  */
-extern void GenericApp_Init( byte task_id );
+extern void LightApp_Init( byte task_id );
 
 /*
  * Task Event Processor for the Generic Application
  */
-extern UINT16 GenericApp_ProcessEvent( byte task_id, UINT16 events );
+extern UINT16 LightApp_ProcessEvent( byte task_id, UINT16 events );
 
 /*********************************************************************
 *********************************************************************/
@@ -97,4 +100,4 @@ extern UINT16 GenericApp_ProcessEvent( byte task_id, UINT16 events );
 }
 #endif
 
-#endif /* GENERICAPP_H */
+#endif /* LIGHTAPP_H */

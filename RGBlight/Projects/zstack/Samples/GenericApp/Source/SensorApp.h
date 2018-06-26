@@ -1,5 +1,5 @@
 /**************************************************************************************************
-  Filename:       GenericApp.h
+  Filename:       SensorApp.h
   Revised:        $Date: 2007-10-27 17:22:23 -0700 (Sat, 27 Oct 2007) $
   Revision:       $Revision: 15795 $
 
@@ -22,7 +22,7 @@
   its documentation for any purpose.
 
   YOU FURTHER ACKNOWLEDGE AND AGREE THAT THE SOFTWARE AND DOCUMENTATION ARE
-  PROVIDED “AS IS” WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+  PROVIDED ï¿½AS ISï¿?WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
   INCLUDING WITHOUT LIMITATION, ANY WARRANTY OF MERCHANTABILITY, TITLE, 
   NON-INFRINGEMENT AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT SHALL
   TEXAS INSTRUMENTS OR ITS LICENSORS BE LIABLE OR OBLIGATED UNDER CONTRACT,
@@ -37,8 +37,8 @@
   contact Texas Instruments Incorporated at www.TI.com. 
 **************************************************************************************************/
 
-#ifndef GENERICAPP_H
-#define GENERICAPP_H
+#ifndef SENSORAPP_H
+#define SENSORAPP_H
 
 #ifdef __cplusplus
 extern "C"
@@ -56,21 +56,22 @@ extern "C"
 
 // These constants are only for example and should be changed to the
 // device's needs
-#define GENERICAPP_ENDPOINT           10
+#define SENSORAPP_ENDPOINT           10
 
-#define GENERICAPP_PROFID             0x0F04
-#define GENERICAPP_DEVICEID           0x0001
-#define GENERICAPP_DEVICE_VERSION     0
-#define GENERICAPP_FLAGS              0
+#define SENSORAPP_PROFID             0x0F04
+#define SENSORAPP_DEVICEID           0x0001
+#define SENSORAPP_DEVICE_VERSION     0
+#define SENSORAPP_FLAGS              0
 
-#define GENERICAPP_MAX_CLUSTERS       1
-#define GENERICAPP_CLUSTERID          1
+#define SENSORAPP_MAX_CLUSTERS       2
+#define SENSORAPP_CLUSTERID          3
+#define SENSORAPP_CLUSTERID_2        5
 
 // Send Message Timeout
-#define GENERICAPP_SEND_MSG_TIMEOUT   5000     // Every 5 seconds
+#define SENSORAPP_SEND_MSG_TIMEOUT   3000     // Every 5 seconds
 
 // Application Events (OSAL) - These are bit weighted definitions.
-#define GENERICAPP_SEND_MSG_EVT       0x0001
+#define SENSORAPP_SEND_MSG_EVT       0x0001
 
 /*********************************************************************
  * MACROS
@@ -83,12 +84,12 @@ extern "C"
 /*
  * Task Initialization for the Generic Application
  */
-extern void GenericApp_Init( byte task_id );
+extern void SensorApp_Init( byte task_id );
 
 /*
  * Task Event Processor for the Generic Application
  */
-extern UINT16 GenericApp_ProcessEvent( byte task_id, UINT16 events );
+extern UINT16 SensorApp_ProcessEvent( byte task_id, UINT16 events );
 
 /*********************************************************************
 *********************************************************************/
@@ -97,4 +98,4 @@ extern UINT16 GenericApp_ProcessEvent( byte task_id, UINT16 events );
 }
 #endif
 
-#endif /* GENERICAPP_H */
+#endif /* SENSORAPP_H */

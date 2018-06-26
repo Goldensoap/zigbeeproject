@@ -1,5 +1,5 @@
 /**************************************************************************************************
-  Filename:       GenericApp.c
+  Filename:       ButtonApp.c
   Revised:        $Date: 2009-03-18 15:56:27 -0700 (Wed, 18 Mar 2009) $
   Revision:       $Revision: 19453 $
 
@@ -22,7 +22,7 @@
   its documentation for any purpose.
 
   YOU FURTHER ACKNOWLEDGE AND AGREE THAT THE SOFTWARE AND DOCUMENTATION ARE
-  PROVIDED “AS IS?WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
+  PROVIDED ï¿½AS IS?WITHOUT WARRANTY OF ANY KIND, EITHER EXPRESS OR IMPLIED, 
   INCLUDING WITHOUT LIMITATION, ANY WARRANTY OF MERCHANTABILITY, TITLE, 
   NON-INFRINGEMENT AND FITNESS FOR A PARTICULAR PURPOSE. IN NO EVENT SHALL
   TEXAS INSTRUMENTS OR ITS LICENSORS BE LIABLE OR OBLIGATED UNDER CONTRACT,
@@ -67,7 +67,7 @@
 #include "ZDProfile.h"
 #include "OnBoard.h"
 
-#include "GenericApp.h"
+#include "ButtonApp.h"
 #include "DebugTrace.h"
 
 #if !defined( WIN32 )
@@ -96,29 +96,29 @@
  */
 
 // This list should be filled with Application specific Cluster IDs.
-const cId_t GenericApp_ClusterList[GENERICAPP_MAX_CLUSTERS] =
+const cId_t ButtonApp_ClusterList[BUTTONAPP_MAX_CLUSTERS] =
 {
-  GENERICAPP_CLUSTERID
+  BUTTONAPP_CLUSTERID
 };
 
-const SimpleDescriptionFormat_t GenericApp_SimpleDesc =
+const SimpleDescriptionFormat_t ButtonApp_SimpleDesc =
 {
-  GENERICAPP_ENDPOINT,              //  int Endpoint;
-  GENERICAPP_PROFID,                //  uint16 AppProfId[2];
-  GENERICAPP_DEVICEID,              //  uint16 AppDeviceId[2];
-  GENERICAPP_DEVICE_VERSION,        //  int   AppDevVer:4;
-  GENERICAPP_FLAGS,                 //  int   AppFlags:4;
-  GENERICAPP_MAX_CLUSTERS,          //  byte  AppNumInClusters;
-  (cId_t *)GenericApp_ClusterList,  //  byte *pAppInClusterList;
-  GENERICAPP_MAX_CLUSTERS,          //  byte  AppNumInClusters;
-  (cId_t *)GenericApp_ClusterList   //  byte *pAppInClusterList;
+  BUTTONAPP_ENDPOINT,              //  int Endpoint;
+  BUTTONAPP_PROFID,                //  uint16 AppProfId[2];
+  BUTTONAPP_DEVICEID,              //  uint16 AppDeviceId[2];
+  BUTTONAPP_DEVICE_VERSION,        //  int   AppDevVer:4;
+  BUTTONAPP_FLAGS,                 //  int   AppFlags:4;
+  BUTTONAPP_MAX_CLUSTERS,          //  byte  AppNumInClusters;
+  (cId_t *)ButtonApp_ClusterList,  //  byte *pAppInClusterList;
+  BUTTONAPP_MAX_CLUSTERS,          //  byte  AppNumInClusters;
+  (cId_t *)ButtonApp_ClusterList   //  byte *pAppInClusterList;
 };
 
 // This is the Endpoint/Interface description.  It is defined here, but
-// filled-in in GenericApp_Init().  Another way to go would be to fill
+// filled-in in ButtonApp_Init().  Another way to go would be to fill
 // in the structure here and make it a "const" (in code space).  The
 // way it's defined in this sample app it is define in RAM.
-endPointDesc_t GenericApp_epDesc;
+endPointDesc_t ButtonApp_epDesc;
 
 /*********************************************************************
  * EXTERNAL VARIABLES
@@ -131,23 +131,23 @@ endPointDesc_t GenericApp_epDesc;
 /*********************************************************************
  * LOCAL VARIABLES
  */
-byte GenericApp_TaskID;   // Task ID for internal task/event processing
+byte ButtonApp_TaskID;   // Task ID for internal task/event processing
                           // This variable will be received when
-                          // GenericApp_Init() is called.
-devStates_t GenericApp_NwkState;
+                          // ButtonApp_Init() is called.
+devStates_t ButtonApp_NwkState;
 
 
-byte GenericApp_TransID;  // This is the unique message ID (counter)
+byte ButtonApp_TransID;  // This is the unique message ID (counter)
 
-afAddrType_t GenericApp_DstAddr;
+afAddrType_t ButtonApp_DstAddr;
 
 /*********************************************************************
  * LOCAL FUNCTIONS
  */
-void GenericApp_ProcessZDOMsgs( zdoIncomingMsg_t *inMsg );
-void GenericApp_HandleKeys( byte shift, byte keys );
-void GenericApp_MessageMSGCB( afIncomingMSGPacket_t *pckt );
-void GenericApp_SendTheMessage( void );
+void ButtonApp_ProcessZDOMsgs( zdoIncomingMsg_t *inMsg );
+void ButtonApp_HandleKeys( byte shift, byte keys );
+void ButtonApp_MessageMSGCB( afIncomingMSGPacket_t *pckt );
+void ButtonApp_SendTheMessage( void );
 
 /*********************************************************************
  * NETWORK LAYER CALLBACKS
@@ -158,7 +158,7 @@ void GenericApp_SendTheMessage( void );
  */
 
 /*********************************************************************
- * @fn      GenericApp_Init
+ * @fn      ButtonApp_Init
  *
  * @brief   Initialization function for the Generic App Task.
  *          This is called during initialization and should contain
@@ -171,36 +171,36 @@ void GenericApp_SendTheMessage( void );
  *
  * @return  none
  */
-void GenericApp_Init( byte task_id )
+void ButtonApp_Init( byte task_id )
 {
-  GenericApp_TaskID = task_id;
-  GenericApp_NwkState = DEV_INIT;
-  GenericApp_TransID = 0;
+  ButtonApp_TaskID = task_id;
+  ButtonApp_NwkState = DEV_INIT;
+  ButtonApp_TransID = 0;
 
   // Device hardware initialization can be added here or in main() (Zmain.c).
   // If the hardware is application specific - add it here.
   // If the hardware is other parts of the device add it in main().
 
-  GenericApp_DstAddr.addrMode = (afAddrMode_t)Addr16Bit;
-  GenericApp_DstAddr.endPoint = GENERICAPP_ENDPOINT;
-  GenericApp_DstAddr.addr.shortAddr = 0xFFFF;
+  ButtonApp_DstAddr.addrMode = (afAddrMode_t)AddrNotPresent;
+  ButtonApp_DstAddr.endPoint = BUTTONAPP_ENDPOINT;
+  ButtonApp_DstAddr.addr.shortAddr = 0xFFFE;
 
   // Fill out the endpoint description.
-  GenericApp_epDesc.endPoint = GENERICAPP_ENDPOINT;
-  GenericApp_epDesc.task_id = &GenericApp_TaskID;
-  GenericApp_epDesc.simpleDesc
-            = (SimpleDescriptionFormat_t *)&GenericApp_SimpleDesc;
-  GenericApp_epDesc.latencyReq = noLatencyReqs;
+  ButtonApp_epDesc.endPoint = BUTTONAPP_ENDPOINT;
+  ButtonApp_epDesc.task_id = &ButtonApp_TaskID;
+  ButtonApp_epDesc.simpleDesc
+            = (SimpleDescriptionFormat_t *)&ButtonApp_SimpleDesc;
+  ButtonApp_epDesc.latencyReq = noLatencyReqs;
 
   // Register the endpoint description with the AF
-  afRegister( &GenericApp_epDesc );
+  afRegister( &ButtonApp_epDesc );
 
   // Register for all key events - This app will handle all key events
-  RegisterForKeys( GenericApp_TaskID );
+  RegisterForKeys( ButtonApp_TaskID );
   
   halUARTCfg_t uartConfig;
   uartConfig.configured           = TRUE;              // 2x30 don't care - see uart driver.
-  uartConfig.baudRate             = HAL_UART_BR_19200;
+  uartConfig.baudRate             = HAL_UART_BR_115200;
   uartConfig.flowControl          = FALSE;
   uartConfig.flowControlThreshold = 64;   // 2x30 don't care - see uart driver.
   uartConfig.rx.maxBufSize        = 128;  // 2x30 don't care - see uart driver.
@@ -209,19 +209,19 @@ void GenericApp_Init( byte task_id )
   uartConfig.intEnable            = TRUE; // 2x30 don't care - see uart driver.
   //uartConfig.callBackFunc =rxCB;
   HalUARTOpen(0,&uartConfig);
-  MicroWait(100);
+  MicroWait(50000);
   HalUARTWrite(0,"system start\r\n",14);
   
   // Update the display
 
-  Hal_Oled_WriteString(HAL_OLED_XSTART,HAL_OLED_LINE_1,"GenericApp",SIZE1 );
+  Hal_Oled_WriteString(HAL_OLED_XSTART,HAL_OLED_LINE_1,"ButtonApp",SIZE1 );
     
-  ZDO_RegisterForZDOMsg( GenericApp_TaskID, End_Device_Bind_rsp );
-  ZDO_RegisterForZDOMsg( GenericApp_TaskID, Match_Desc_rsp );
+  ZDO_RegisterForZDOMsg( ButtonApp_TaskID, End_Device_Bind_rsp );
+  ZDO_RegisterForZDOMsg( ButtonApp_TaskID, Match_Desc_rsp );
 }
 
 /*********************************************************************
- * @fn      GenericApp_ProcessEvent
+ * @fn      ButtonApp_ProcessEvent
  *
  * @brief   Generic Application Task event processor.  This function
  *          is called to process all events for the task.  Events
@@ -233,7 +233,7 @@ void GenericApp_Init( byte task_id )
  *
  * @return  none
  */
-UINT16 GenericApp_ProcessEvent( byte task_id, UINT16 events )
+UINT16 ButtonApp_ProcessEvent( byte task_id, UINT16 events )
 {
   afIncomingMSGPacket_t *MSGpkt;
   afDataConfirm_t *afDataConfirm;
@@ -246,17 +246,17 @@ UINT16 GenericApp_ProcessEvent( byte task_id, UINT16 events )
 
   if ( events & SYS_EVENT_MSG )
   {
-    MSGpkt = (afIncomingMSGPacket_t *)osal_msg_receive( GenericApp_TaskID );
+    MSGpkt = (afIncomingMSGPacket_t *)osal_msg_receive( ButtonApp_TaskID );
     while ( MSGpkt )
     {
       switch ( MSGpkt->hdr.event )
       {
         case ZDO_CB_MSG:
-          GenericApp_ProcessZDOMsgs( (zdoIncomingMsg_t *)MSGpkt );
+          ButtonApp_ProcessZDOMsgs( (zdoIncomingMsg_t *)MSGpkt );
           break;
           
         case KEY_CHANGE:
-          GenericApp_HandleKeys( ((keyChange_t *)MSGpkt)->state, ((keyChange_t *)MSGpkt)->keys );
+          ButtonApp_HandleKeys( ((keyChange_t *)MSGpkt)->state, ((keyChange_t *)MSGpkt)->keys );
           break;
 
         case AF_DATA_CONFIRM_CMD:
@@ -278,20 +278,16 @@ UINT16 GenericApp_ProcessEvent( byte task_id, UINT16 events )
           break;
 
         case AF_INCOMING_MSG_CMD:
-          GenericApp_MessageMSGCB( MSGpkt );
+          ButtonApp_MessageMSGCB( MSGpkt );
           break;
 
         case ZDO_STATE_CHANGE:
-          GenericApp_NwkState = (devStates_t)(MSGpkt->hdr.status);
-          if ( (GenericApp_NwkState == DEV_ZB_COORD)
-              || (GenericApp_NwkState == DEV_ROUTER)
-              || (GenericApp_NwkState == DEV_END_DEVICE) )
+          ButtonApp_NwkState = (devStates_t)(MSGpkt->hdr.status);
+          if ( (ButtonApp_NwkState == DEV_ZB_COORD)
+              || (ButtonApp_NwkState == DEV_ROUTER)
+              || (ButtonApp_NwkState == DEV_END_DEVICE) )
           {
             HalUARTWrite(0,"success join net\r\n",19);
-            // Start sending "the" message in a regular interval.
-            osal_start_timerEx( GenericApp_TaskID,
-                                GENERICAPP_SEND_MSG_EVT,
-                              GENERICAPP_SEND_MSG_TIMEOUT );
           }
           break;
 
@@ -303,27 +299,11 @@ UINT16 GenericApp_ProcessEvent( byte task_id, UINT16 events )
       osal_msg_deallocate( (uint8 *)MSGpkt );
 
       // Next
-      MSGpkt = (afIncomingMSGPacket_t *)osal_msg_receive( GenericApp_TaskID );
+      MSGpkt = (afIncomingMSGPacket_t *)osal_msg_receive( ButtonApp_TaskID );
     }
 
     // return unprocessed events
     return (events ^ SYS_EVENT_MSG);
-  }
-
-  // Send a message out - This event is generated by a timer
-  //  (setup in GenericApp_Init()).
-  if ( events & GENERICAPP_SEND_MSG_EVT )
-  {
-    // Send "the" message
-    GenericApp_SendTheMessage();
-
-    // Setup to send message again
-    osal_start_timerEx( GenericApp_TaskID,
-                        GENERICAPP_SEND_MSG_EVT,
-                      GENERICAPP_SEND_MSG_TIMEOUT );
-
-    // return unprocessed events
-    return (events ^ GENERICAPP_SEND_MSG_EVT);
   }
 
   // Discard unknown events
@@ -335,7 +315,7 @@ UINT16 GenericApp_ProcessEvent( byte task_id, UINT16 events )
  */
 
 /*********************************************************************
- * @fn      GenericApp_ProcessZDOMsgs()
+ * @fn      ButtonApp_ProcessZDOMsgs()
  *
  * @brief   Process response messages
  *
@@ -343,7 +323,7 @@ UINT16 GenericApp_ProcessEvent( byte task_id, UINT16 events )
  *
  * @return  none
  */
-void GenericApp_ProcessZDOMsgs( zdoIncomingMsg_t *inMsg )
+void ButtonApp_ProcessZDOMsgs( zdoIncomingMsg_t *inMsg )
 {
   switch ( inMsg->clusterID )
   {
@@ -369,10 +349,10 @@ void GenericApp_ProcessZDOMsgs( zdoIncomingMsg_t *inMsg )
         {
           if ( pRsp->status == ZSuccess && pRsp->cnt )
           {
-            GenericApp_DstAddr.addrMode = (afAddrMode_t)Addr16Bit;
-            GenericApp_DstAddr.addr.shortAddr = pRsp->nwkAddr;
+            ButtonApp_DstAddr.addrMode = (afAddrMode_t)Addr16Bit;
+            ButtonApp_DstAddr.addr.shortAddr = pRsp->nwkAddr;
             // Take the first endpoint, Can be changed to search through endpoints
-            GenericApp_DstAddr.endPoint = pRsp->epList[0];
+            ButtonApp_DstAddr.endPoint = pRsp->epList[0];
 
             // Light LED
             HalLedSet( HAL_LED_1, HAL_LED_MODE_ON );
@@ -385,7 +365,7 @@ void GenericApp_ProcessZDOMsgs( zdoIncomingMsg_t *inMsg )
 }
 
 /*********************************************************************
- * @fn      GenericApp_HandleKeys
+ * @fn      ButtonApp_HandleKeys
  *
  * @brief   Handles all key events for this device.
  *
@@ -398,39 +378,11 @@ void GenericApp_ProcessZDOMsgs( zdoIncomingMsg_t *inMsg )
  *
  * @return  none
  */
-void GenericApp_HandleKeys( byte shift, byte keys )
+void ButtonApp_HandleKeys( byte shift, byte keys )
 {
   zAddrType_t dstAddr;
-  
-  // Shift is used to make each button/switch dual purpose.
-  if ( shift )
-  {
-    if ( keys & HAL_KEY_SW_1 )
-    {
-    }
-    if ( keys & HAL_KEY_SW_2 )
-    {
-    }
-    if ( keys & HAL_KEY_SW_3 )
-    {
-    }
-    if ( keys & HAL_KEY_SW_4 )
-    {
-    }
-  }
-  else
-  {
-    if ( keys & HAL_KEY_SW_2 )
-    {
-      HalLedSet ( HAL_LED_1, HAL_LED_MODE_ON );
-    }
-    
-    if ( keys & HAL_KEY_SW_1 )
-    {
-      HalLedSet ( HAL_LED_1, HAL_LED_MODE_OFF );
-    }
 
-    if ( keys & HAL_KEY_SW_6 )
+    if ( keys & HAL_KEY_SW_1 )
     {
       HalLedSet ( HAL_LED_1, HAL_LED_MODE_OFF );
 
@@ -438,26 +390,18 @@ void GenericApp_HandleKeys( byte shift, byte keys )
       dstAddr.addrMode = Addr16Bit;
       dstAddr.addr.shortAddr = 0x0000; // Coordinator
       ZDP_EndDeviceBindReq( &dstAddr, NLME_GetShortAddr(), 
-                            GenericApp_epDesc.endPoint,
-                            GENERICAPP_PROFID,
-                            GENERICAPP_MAX_CLUSTERS, (cId_t *)GenericApp_ClusterList,
-                            GENERICAPP_MAX_CLUSTERS, (cId_t *)GenericApp_ClusterList,
+                            ButtonApp_epDesc.endPoint,
+                            BUTTONAPP_PROFID,
+                            BUTTONAPP_MAX_CLUSTERS, (cId_t *)ButtonApp_ClusterList,
+                            BUTTONAPP_MAX_CLUSTERS, (cId_t *)ButtonApp_ClusterList,
                             FALSE );
     }
     
-    if ( keys & HAL_KEY_SW_4 )
+    if ( keys & HAL_KEY_SW_2 )
     {
-      HalLedSet ( HAL_LED_1, HAL_LED_MODE_OFF );
-      // Initiate a Match Description Request (Service Discovery)
-      dstAddr.addrMode = AddrBroadcast;
-      dstAddr.addr.shortAddr = NWK_BROADCAST_SHORTADDR;
-      ZDP_MatchDescReq( &dstAddr, NWK_BROADCAST_SHORTADDR,
-                        GENERICAPP_PROFID,
-                        GENERICAPP_MAX_CLUSTERS, (cId_t *)GenericApp_ClusterList,
-                        GENERICAPP_MAX_CLUSTERS, (cId_t *)GenericApp_ClusterList,
-                        FALSE );
+      ButtonApp_SendTheMessage();
     }
-  }
+  
 }
 
 /*********************************************************************
@@ -465,7 +409,7 @@ void GenericApp_HandleKeys( byte shift, byte keys )
  */
 
 /*********************************************************************
- * @fn      GenericApp_MessageMSGCB
+ * @fn      ButtonApp_MessageMSGCB
  *
  * @brief   Data message processor callback.  This function processes
  *          any incoming data - probably from other devices.  So, based
@@ -475,13 +419,13 @@ void GenericApp_HandleKeys( byte shift, byte keys )
  *
  * @return  none
  */
-void GenericApp_MessageMSGCB( afIncomingMSGPacket_t *pkt )
+void ButtonApp_MessageMSGCB( afIncomingMSGPacket_t *pkt )
 {
   HalUARTWrite(0,pkt->cmd.Data,pkt->cmd.DataLength);
   Hal_Oled_WriteString(HAL_OLED_XSTART,HAL_OLED_LINE_6,pkt->cmd.Data,SIZE1);
   switch ( pkt->clusterId )
   {
-    case GENERICAPP_CLUSTERID:
+    case BUTTONAPP_CLUSTERID:
      
       // "the" message
 #if defined( WIN32 )
@@ -492,7 +436,7 @@ void GenericApp_MessageMSGCB( afIncomingMSGPacket_t *pkt )
 }
 
 /*********************************************************************
- * @fn      GenericApp_SendTheMessage
+ * @fn      ButtonApp_SendTheMessage
  *
  * @brief   Send "the" message.
  *
@@ -500,21 +444,24 @@ void GenericApp_MessageMSGCB( afIncomingMSGPacket_t *pkt )
  *
  * @return  none
  */
-void GenericApp_SendTheMessage( void )
+void ButtonApp_SendTheMessage( void )
 {
-  char theMessageData[] = "Hello World";
+  static unsigned char LedState;
+  byte str_uart[5]={0};
+  LedState = !LedState;
+  sprintf(str_uart, "%d", LedState);
 
-  if ( AF_DataRequest( &GenericApp_DstAddr, &GenericApp_epDesc,
-                       GENERICAPP_CLUSTERID,
-                       (byte)osal_strlen( theMessageData ) + 1,
-                       (byte *)&theMessageData,
-                       &GenericApp_TransID,
+  if ( AF_DataRequest( &ButtonApp_DstAddr, &ButtonApp_epDesc,
+                       BUTTONAPP_CLUSTERID,
+                       (byte)osal_strlen( str_uart ) + 1,
+                       (byte *)&str_uart,
+                       &ButtonApp_TransID,
                        AF_DISCV_ROUTE, AF_DEFAULT_RADIUS ) == afStatus_SUCCESS )
   {
     // Successfully requested to be sent.
     HalUARTWrite(0,"success send messages",21);
     //OLED_Clear();
-    Hal_Oled_WriteString(HAL_OLED_XSTART,HAL_OLED_LINE_5,"send success",SIZE1 );
+    Hal_Oled_WriteString(HAL_OLED_XSTART,HAL_OLED_LINE_5,str_uart,SIZE1 );
   }
   else
   {
